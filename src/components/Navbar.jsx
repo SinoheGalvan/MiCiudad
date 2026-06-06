@@ -18,7 +18,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="glass-navbar fixed top-0 left-0 right-0 z-50 px-5 py-3 flex items-center justify-between">
+      <nav className="glass-navbar fixed top-0 left-0 right-0 z-[1100] px-5 py-3 flex items-center justify-between">
         <div className="flex flex-col leading-tight">
           <span className="font-bold text-[1.2rem] text-[#2A9D8F] tracking-tight">MiCiudad</span>
           <span className="text-[0.7rem] text-gray-500 font-medium tracking-wide uppercase">
@@ -42,7 +42,7 @@ export default function Navbar() {
 
       {modalOpen && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[1200] flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.45)' }}
           onClick={e => e.target === e.currentTarget && handleClose()}
         >
