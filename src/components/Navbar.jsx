@@ -26,9 +26,14 @@ export default function Navbar() {
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <button className="btn-outline hidden sm:inline-block">Explorar</button>
-          <button className="btn-accent" onClick={() => setModalOpen(true)}>
+        <div className="flex items-center gap-1.5">
+          <button className="btn-outline !text-xs !px-2.5 !py-1.5 sm:!text-sm sm:!px-5 sm:!py-2">
+            Explorar
+          </button>
+          <button
+            className="btn-accent !text-xs !px-2.5 !py-1.5 sm:!text-sm sm:!px-5 sm:!py-2"
+            onClick={() => setModalOpen(true)}
+          >
             <span className="hidden sm:inline">Registra tu negocio</span>
             <span className="sm:hidden">Registrar</span>
           </button>
