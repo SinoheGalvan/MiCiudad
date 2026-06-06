@@ -90,6 +90,24 @@ body {
   color: white;
 }
 
+/* ── Zoom control — sigue al PlaceCard ──────────────── */
+.leaflet-bottom.leaflet-left {
+  margin-left: 8px;
+  margin-bottom: 16px;
+  transition: margin-left 300ms ease, margin-bottom 300ms ease;
+}
+
+.place-open .leaflet-bottom.leaflet-left {
+  margin-left: 396px; /* 380px panel + 16px gap */
+}
+
+@media (max-width: 640px) {
+  .place-open .leaflet-bottom.leaflet-left {
+    margin-left: 8px;
+    margin-bottom: 72vh;
+  }
+}
+
 /* ── Scrollbar ───────────────────────────────────────── */
 .scrollbar-thin::-webkit-scrollbar {
   width: 4px;

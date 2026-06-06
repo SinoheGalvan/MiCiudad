@@ -68,8 +68,8 @@ export default function Map({ onPlaceSelect }) {
       maxZoom: 19,
     }).addTo(map)
 
-    // Zoom controls — top-right to not clash with FilterBar
-    L.control.zoom({ position: 'topright' }).addTo(map)
+    // Zoom controls — bottom-left: clear of FilterBar (top), chatbot (bottom-right) and PlaceCard (right)
+    L.control.zoom({ position: 'bottomleft' }).addTo(map)
 
     const cluster = L.markerClusterGroup({
       showCoverageOnHover: false,
@@ -132,6 +132,16 @@ export default function Map({ onPlaceSelect }) {
 
       {/* Leaflet control overrides */}
       <style>{`
+        /* Position the bottom-left corner container */
+        .leaflet-bottom.leaflet-left {
+          margin-bottom: 16px;
+          margin-left: 8px;
+        }
+        /* When PlaceCard bottom sheet is open, App.jsx adds .has-placecard to <body>
+           so the zoom floats above the sheet (72 vh max-height + gap) */
+        .has-placecard .leaflet-bottom.leaflet-left {
+          margin-bottom: calc(72vh + 8px);
+        }
         .leaflet-control-zoom {
           backdrop-filter: blur(12px) !important;
           -webkit-backdrop-filter: blur(12px) !important;
@@ -140,7 +150,6 @@ export default function Map({ onPlaceSelect }) {
           border-radius: 12px !important;
           overflow: hidden;
           box-shadow: 0 4px 16px rgba(0,0,0,0.1) !important;
-          margin-top: 80px !important;
         }
         .leaflet-control-zoom a {
           background: transparent !important;

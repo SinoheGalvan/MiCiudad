@@ -1,37 +1,141 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
+import { places } from '../data/places'
 
-const CATEGORIAS = ['Restaurante', 'Hotel', 'Atracción turística', 'Tienda', 'Servicio', 'Otro']
+const CATEGORIAS_FORM = ['Restaurante', 'Hotel', 'Atracción turística', 'Tienda', 'Servicio', 'Otro']
 
-export default function Navbar() {
+export default function Navbar({ onDrawerOpen, onPlaceSelect }) {
   const [modalOpen, setModalOpen] = useState(false)
   const [form, setForm] = useState({ nombre: '', categoria: '', contacto: '' })
+  const [query, setQuery] = useState('')
+  const [dropdownOpen, setDropdownOpen] = useState(false)
+  const searchRef = useRef(null)
+
+  const results = query.trim().length > 0
+    ? places
+        .filter(p => {
+          const q = query.toLowerCase()
+          return (
+            p.nombre.toLowerCase().includes(q) ||
+            p.categoria.toLowerCase().includes(q) ||
+            (p.descripcion && p.descripcion.toLowerCase().includes(q))
+          )
+        })
+        .slice(0, 5)
+    : []
+
+  useEffect(() => {
+    function onMouseDown(e) {
+      if (searchRef.current && !searchRef.current.contains(e.target)) {
+        setDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    return () => document.removeEventListener('mousedown', onMouseDown)
+  }, [])
+
+  function handleSelectResult(place) {
+    onPlaceSelect?.(place)
+    setQuery('')
+    setDropdownOpen(false)
+  }
+
+  function handleCloseModal() {
+    setModalOpen(false)
+    setForm({ nombre: '', categoria: '', contacto: '' })
+  }
 
   function handleField(e) {
     const { name, value } = e.target
     setForm(prev => ({ ...prev, [name]: value }))
   }
 
-  function handleClose() {
-    setModalOpen(false)
-    setForm({ nombre: '', categoria: '', contacto: '' })
-  }
-
   return (
     <>
-      <nav className="glass-navbar fixed top-0 left-0 right-0 z-[1100] px-5 py-3 flex items-center justify-between">
-        <div className="flex flex-col leading-tight">
-          <span className="font-bold text-[1.2rem] text-[#2A9D8F] tracking-tight">MiCiudad</span>
-          <span className="text-[0.7rem] text-gray-500 font-medium tracking-wide uppercase">
+      <nav className="glass-navbar fixed top-0 left-0 right-0 z-[1100] px-3 py-2.5 flex items-center gap-2 sm:gap-3">
+
+        {/* Hamburger */}
+        <button
+          onClick={onDrawerOpen}
+          className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-gray-600 hover:bg-black/6 transition-colors"
+          aria-label="Abrir menú"
+        >
+          <MenuIcon />
+        </button>
+
+        {/* Logo */}
+        <div className="flex-shrink-0 flex flex-col leading-tight">
+          <span className="font-bold text-[1.05rem] text-[#2A9D8F] tracking-tight">MiCiudad</span>
+          <span className="text-[0.6rem] text-gray-500 font-medium tracking-widest uppercase hidden sm:block">
             Descubre Durango
           </span>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <button className="btn-outline !text-xs !px-2.5 !py-1.5 sm:!text-sm sm:!px-5 sm:!py-2">
+        {/* Search */}
+        <div ref={searchRef} className="flex-1 relative min-w-0">
+          <div
+            className="flex items-center gap-2 px-3 py-1.5 rounded-full"
+            style={{
+              background: 'rgba(255,255,255,0.85)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              border: '1px solid rgba(0,0,0,0.1)',
+            }}
+          >
+            <span className="flex-shrink-0 text-gray-400"><SearchIcon /></span>
+            <input
+              type="text"
+              placeholder="Descubre Durango..."
+              value={query}
+              onChange={e => { setQuery(e.target.value); setDropdownOpen(true) }}
+              onFocus={() => query.trim() && setDropdownOpen(true)}
+              className="flex-1 min-w-0 bg-transparent outline-none text-sm text-gray-800 placeholder:text-gray-400"
+            />
+            {query && (
+              <button
+                onClick={() => { setQuery(''); setDropdownOpen(false) }}
+                className="flex-shrink-0 text-gray-400 hover:text-gray-600 text-lg leading-none"
+                aria-label="Limpiar"
+              >
+                &times;
+              </button>
+            )}
+          </div>
+
+          {/* Dropdown results */}
+          {dropdownOpen && results.length > 0 && (
+            <div
+              className="glass absolute top-full left-0 right-0 mt-1.5 overflow-hidden"
+              style={{ background: 'rgba(255,255,255,0.95)', boxShadow: '0 8px 24px rgba(0,0,0,0.1)', zIndex: 10 }}
+            >
+              {results.map(place => (
+                <button
+                  key={place.id}
+                  onMouseDown={() => handleSelectResult(place)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-left transition-colors"
+                  style={{ ':hover': {} }}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(42,157,143,0.06)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                >
+                  <span className="text-sm font-medium text-gray-800 truncate">{place.nombre}</span>
+                  <span
+                    className="text-xs font-semibold ml-2 flex-shrink-0 px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(42,157,143,0.12)', color: '#2A9D8F' }}
+                  >
+                    {place.categoria}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Buttons */}
+        <div className="flex-shrink-0 flex items-center gap-1.5">
+          <button className="btn-outline !text-xs !px-2.5 !py-1.5 sm:!text-sm sm:!px-4 sm:!py-2">
             Explorar
           </button>
           <button
-            className="btn-accent !text-xs !px-2.5 !py-1.5 sm:!text-sm sm:!px-5 sm:!py-2"
+            className="btn-accent !text-xs !px-2.5 !py-1.5 sm:!text-sm sm:!px-4 sm:!py-2"
             onClick={() => setModalOpen(true)}
           >
             <span className="hidden sm:inline">Registra tu negocio</span>
@@ -40,11 +144,12 @@ export default function Navbar() {
         </div>
       </nav>
 
+      {/* Register modal */}
       {modalOpen && (
         <div
           className="fixed inset-0 z-[1200] flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.45)' }}
-          onClick={e => e.target === e.currentTarget && handleClose()}
+          onClick={e => e.target === e.currentTarget && handleCloseModal()}
         >
           <div
             className="glass-card w-full max-w-md rounded-2xl p-6"
@@ -53,7 +158,7 @@ export default function Navbar() {
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-lg font-bold text-gray-900">Registra tu negocio</h2>
               <button
-                onClick={handleClose}
+                onClick={handleCloseModal}
                 className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors text-xl leading-none"
                 aria-label="Cerrar"
               >
@@ -72,7 +177,6 @@ export default function Navbar() {
                   className="input-field"
                 />
               </Field>
-
               <Field label="Categoría">
                 <select
                   name="categoria"
@@ -81,12 +185,11 @@ export default function Navbar() {
                   className="input-field bg-white"
                 >
                   <option value="">Selecciona una categoría</option>
-                  {CATEGORIAS.map(c => (
+                  {CATEGORIAS_FORM.map(c => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               </Field>
-
               <Field label="Teléfono o correo">
                 <input
                   name="contacto"
@@ -97,7 +200,6 @@ export default function Navbar() {
                   className="input-field"
                 />
               </Field>
-
               <button type="submit" className="btn-accent w-full py-3 rounded-xl mt-1">
                 Enviar solicitud
               </button>
@@ -133,5 +235,24 @@ function Field({ label, children }) {
       <label className="text-sm font-semibold text-gray-700">{label}</label>
       {children}
     </div>
+  )
+}
+
+function MenuIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+      <line x1="3" y1="6" x2="21" y2="6" />
+      <line x1="3" y1="12" x2="21" y2="12" />
+      <line x1="3" y1="18" x2="21" y2="18" />
+    </svg>
+  )
+}
+
+function SearchIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="11" cy="11" r="8" />
+      <line x1="21" y1="21" x2="16.65" y2="16.65" />
+    </svg>
   )
 }

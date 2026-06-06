@@ -12,7 +12,7 @@ export default function PlaceCard({ place, onClose }) {
       className="
         glass-card fixed z-[1050]
         left-0 right-0 bottom-0 rounded-t-2xl rounded-b-none
-        sm:left-auto sm:right-4 sm:bottom-4 sm:top-[68px] sm:w-[380px] sm:rounded-2xl
+        sm:right-auto sm:left-4 sm:bottom-4 sm:top-[68px] sm:w-[380px] sm:rounded-2xl
         flex flex-col overflow-hidden
         max-h-[72vh] sm:max-h-none
       "
