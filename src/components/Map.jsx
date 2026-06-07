@@ -3,16 +3,20 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet.markercluster/dist/MarkerCluster.css'
 import 'leaflet.markercluster/dist/MarkerCluster.Default.css'
+import 'leaflet-routing-machine'
+import 'leaflet-routing-machine/dist/leaflet-routing-machine.css'
 import { places } from '../data/places'
 import FilterBar from './FilterBar'
 
+const ORIGIN = { lat: 24.0147, lng: -104.6701 }
+
 const CATEGORY_CONFIG = {
-  Restaurante: { color: '#E76F51' },
-  Museo:       { color: '#457B9D' },
-  Café:        { color: '#795548' },
-  Artesanías:  { color: '#F4A261' },
-  Histórico:   { color: '#2A9D8F' },
-  Evento:      { color: '#9B59B6' },
+  Restaurante: { color: '#E07A5F' },
+  Museo:       { color: '#4A6FA5' },
+  Café:        { color: '#8B6B47' },
+  Artesanías:  { color: '#9B59B6' },
+  Histórico:   { color: '#2C3E50' },
+  Evento:      { color: '#F39C12' },
 }
 
 const CATEGORY_INITIALS = {
@@ -41,13 +45,46 @@ function makePinIcon(categoria) {
   })
 }
 
+function makeEventIcon() {
+  const html = `
+    <div style="position:relative;width:40px;height:40px;">
+      <svg viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg"
+        style="width:40px;height:40px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))">
+        <polygon
+          points="20,3 25,14 37,14 28,22 31,34 20,27 9,34 12,22 3,14 15,14"
+          fill="#F39C12"
+          stroke="white"
+          stroke-width="2"
+        />
+        <text
+          x="20" y="23"
+          text-anchor="middle"
+          font-size="11"
+          font-weight="bold"
+          fill="white"
+          font-family="Arial, sans-serif"
+        >EVT</text>
+      </svg>
+    </div>
+  `
+  return L.divIcon({
+    html,
+    className: '',
+    iconSize: [40, 40],
+    iconAnchor: [20, 20],
+    popupAnchor: [0, -20],
+  })
+}
+
 const DURANGO_CENTER = [24.0277, -104.6532]
 const CATEGORIES = ['Todos', ...Object.keys(CATEGORY_CONFIG)]
 
-export default function Map({ onPlaceSelect }) {
+export default function Map({ onPlaceSelect, mapRef, routeDestination, userLocation }) {
   const containerRef = useRef(null)
-  const mapRef = useRef(null)
+  const mapInst = useRef(null)
   const clusterRef = useRef(null)
+  const routingControlRef = useRef(null)
+  const userMarkerRef = useRef(null)
   const onSelectRef = useRef(onPlaceSelect)
   const [activeFilter, setActiveFilter] = useState('Todos')
 
@@ -55,7 +92,7 @@ export default function Map({ onPlaceSelect }) {
 
   // Initialize map once
   useEffect(() => {
-    if (mapRef.current || !containerRef.current) return
+    if (mapInst.current || !containerRef.current) return
 
     const map = L.map(containerRef.current, {
       center: DURANGO_CENTER,
@@ -85,15 +122,165 @@ export default function Map({ onPlaceSelect }) {
     })
     map.addLayer(cluster)
 
-    mapRef.current = map
+    mapInst.current = map
     clusterRef.current = cluster
+    if (mapRef) mapRef.current = map
 
     return () => {
       map.remove()
-      mapRef.current = null
+      mapInst.current = null
       clusterRef.current = null
+      if (mapRef) mapRef.current = null
     }
   }, [])
+
+  // Show / update user location marker
+  useEffect(() => {
+    const map = mapInst.current
+    if (!map) return
+
+    if (userMarkerRef.current) {
+      userMarkerRef.current.remove()
+      userMarkerRef.current = null
+    }
+
+    if (!userLocation) return
+
+    const userIcon = L.divIcon({
+      html: `
+        <div style="width:20px;height:20px;position:relative;">
+          <div style="
+            position:absolute;width:40px;height:40px;
+            top:-10px;left:-10px;
+            background:rgba(42,157,143,0.2);
+            border-radius:50%;
+            animation:locationPulse 2s ease-out infinite;
+          "></div>
+          <div style="
+            width:20px;height:20px;
+            background:#2A9D8F;
+            border:3px solid white;
+            border-radius:50%;
+            box-shadow:0 2px 8px rgba(42,157,143,0.5);
+            position:relative;z-index:1;
+          "></div>
+        </div>
+      `,
+      className: '',
+      iconSize: [20, 20],
+      iconAnchor: [10, 10],
+    })
+
+    userMarkerRef.current = L.marker(
+      [userLocation.lat, userLocation.lng],
+      { icon: userIcon, zIndexOffset: 1000 }
+    )
+      .addTo(map)
+      .bindPopup('📍 Tu ubicación actual')
+  }, [userLocation])
+
+  // Draw / clear route whenever routeDestination changes
+  useEffect(() => {
+    // cleanup helper
+    const clearControl = () => {
+      if (routingControlRef.current && mapInst.current) {
+        try { mapInst.current.removeControl(routingControlRef.current) } catch (_) {}
+        routingControlRef.current = null
+      }
+    }
+
+    if (!routeDestination) {
+      clearControl()
+      return
+    }
+
+    console.log('Creating route to:', routeDestination)
+    console.log('Coords:', routeDestination.lat, routeDestination.lng)
+    console.log('Are numbers:',
+      typeof routeDestination.lat === 'number',
+      typeof routeDestination.lng === 'number'
+    )
+
+    // delay so the map instance is guaranteed ready
+    const timer = setTimeout(() => {
+      if (!mapInst.current) return
+      if (!L.Routing) {
+        console.error('L.Routing is undefined — leaflet-routing-machine may not have loaded')
+        return
+      }
+
+      clearControl()
+
+      try {
+        const origin      = L.latLng(
+          parseFloat(routeDestination.originLat || 24.0147),
+          parseFloat(routeDestination.originLng || -104.6701)
+        )
+        const destination = L.latLng(
+          parseFloat(routeDestination.lat),
+          parseFloat(routeDestination.lng)
+        )
+
+        const control = L.Routing.control({
+          waypoints: [origin, destination],
+          router: L.Routing.osrmv1({
+            serviceUrl: 'https://router.project-osrm.org/route/v1',
+            profile: 'driving',
+          }),
+          routeWhileDragging: false,
+          showAlternatives: false,
+          show: false,
+          collapsible: true,
+          addWaypoints: false,
+          draggableWaypoints: false,
+          fitSelectedRoutes: false,
+          lineOptions: {
+            styles: [{ color: '#2A9D8F', weight: 5, opacity: 0.85 }],
+            extendToWaypoints: true,
+            missingRouteTolerance: 0,
+          },
+          createMarker: (i, waypoint) => {
+            const emoji = i === 0 ? '🚌' : '📍'
+            const color = i === 0 ? '#2A9D8F' : '#E07A5F'
+            return L.marker(waypoint.latLng, {
+              icon: L.divIcon({
+                html: `<div style="
+                  width:32px;height:32px;
+                  background:${color};
+                  border:3px solid white;border-radius:50%;
+                  display:flex;align-items:center;justify-content:center;
+                  box-shadow:0 2px 8px rgba(0,0,0,0.3);font-size:14px;
+                ">${emoji}</div>`,
+                className: '',
+                iconSize: [32, 32],
+                iconAnchor: [16, 16],
+              }),
+            })
+          },
+        }).addTo(mapInst.current)
+
+        control.on('routesfound', (e) => {
+          console.log('Route found:', e.routes[0])
+          const bounds = L.latLngBounds([origin, destination])
+          mapInst.current?.fitBounds(bounds, { padding: [80, 80], animate: true, duration: 1.5 })
+        })
+        control.on('routingerror', (e) => {
+          console.error('Routing error:', e)
+          const bounds = L.latLngBounds([origin, destination])
+          mapInst.current?.fitBounds(bounds, { padding: [80, 80] })
+        })
+
+        routingControlRef.current = control
+      } catch (err) {
+        console.error('Error creating routing control:', err)
+      }
+    }, 400)
+
+    return () => {
+      clearTimeout(timer)
+      clearControl()
+    }
+  }, [routeDestination])
 
   // Rebuild markers whenever filter changes
   useEffect(() => {
@@ -107,7 +294,8 @@ export default function Map({ onPlaceSelect }) {
       : places.filter((p) => p.categoria === activeFilter)
 
     visible.forEach((place) => {
-      const marker = L.marker([place.lat, place.lng], { icon: makePinIcon(place.categoria) })
+      const icon = place.categoria === 'Evento' ? makeEventIcon() : makePinIcon(place.categoria)
+      const marker = L.marker([place.lat, place.lng], { icon })
       marker.on('click', () => onSelectRef.current?.(place))
       cluster.addLayer(marker)
     })

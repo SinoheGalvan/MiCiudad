@@ -1,5 +1,7 @@
-export default function PlaceCard({ place, onClose }) {
+export default function PlaceCard({ place, onClose, savedPlaces = [], onToggleSave, onCreateRoute }) {
   if (!place) return null
+
+  const isSaved = savedPlaces.some(p => p.id === place.id)
 
   const mapsUrl = place.lat && place.lng
     ? `https://www.google.com/maps/dir/?api=1&destination=${place.lat},${place.lng}`
@@ -95,14 +97,54 @@ export default function PlaceCard({ place, onClose }) {
           )}
         </div>
 
-        <a
-          href={mapsUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="btn-accent block text-center py-3 rounded-xl mt-auto"
-        >
-          Cómo llegar
-        </a>
+        <div className="flex flex-col gap-2 mt-auto">
+          <button
+            onClick={() => onToggleSave?.(place)}
+            className="w-full flex items-center justify-center gap-2 py-3 font-semibold text-base transition-all active:scale-95"
+            style={isSaved ? {
+              background: 'rgba(42,157,143,0.1)',
+              border: '1px solid rgba(42,157,143,0.3)',
+              color: '#2A9D8F',
+              borderRadius: 999,
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            } : {
+              background: 'rgba(255,255,255,0.7)',
+              border: '1px solid rgba(0,0,0,0.1)',
+              color: '#444',
+              borderRadius: 999,
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+          >
+            {isSaved ? <HeartFilledIcon /> : <HeartOutlineIcon />}
+            {isSaved ? 'Guardado' : 'Guardar lugar'}
+          </button>
+
+          <button
+            onClick={() => onCreateRoute?.(place)}
+            className="w-full flex items-center justify-center gap-2 py-3 font-semibold text-base transition-all active:scale-95"
+            style={{
+              background: 'rgba(255,255,255,0.7)',
+              border: '1px solid rgba(42,157,143,0.3)',
+              color: '#2A9D8F',
+              borderRadius: 999,
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+          >
+            🗺️ Crear ruta
+          </button>
+
+          <a
+            href={mapsUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn-accent block text-center py-3 rounded-full text-base font-semibold"
+          >
+            Cómo llegar
+          </a>
+        </div>
       </div>
     </div>
   )
@@ -119,6 +161,22 @@ function InfoRow({ label, value, icon }) {
         <span className="block text-sm text-gray-700 mt-0.5 leading-snug">{value}</span>
       </div>
     </div>
+  )
+}
+
+function HeartOutlineIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
+  )
+}
+
+function HeartFilledIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+    </svg>
   )
 }
 
